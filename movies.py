@@ -158,7 +158,7 @@ def generate_website():
     html_content = template.replace("__TEMPLATE_MOVIE_GRID__", movie_grid)
 
     # Write to the output file
-    with open("../index.html", "w", encoding="utf-8") as f:
+    with open("_static/index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
 
     print("Website was generated successfully.")
