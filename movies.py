@@ -1,7 +1,7 @@
 import statistics
 import random
-import movie_storage
-import movie_storage_sql as storage
+from storage import movie_storage_sql as storage
+from storage import movie_storage
 
 def command_list_movies():
     """Retrieve and display all movies from the database."""
