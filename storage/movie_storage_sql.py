@@ -5,9 +5,8 @@ import requests
 engine = create_engine("sqlite:///movies.db")
 
 with engine.connect() as connection:
-    connection.execute(text("DROP TABLE IF EXISTS movies"))
     connection.execute(text("""
-        CREATE TABLE movies (
+        CREATE TABLE IF NOT EXISTS movies (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT UNIQUE NOT NULL,
             year INTEGER,
@@ -16,6 +15,7 @@ with engine.connect() as connection:
         )
     """))
     connection.commit()
+
 
 # ---------------------------
 # FUNCTIONS
@@ -40,37 +40,49 @@ def add_movie(title):
 
     try:
         # Fetch movie data from OMDb
-        response = requests.get(OMDB_URL, params={"t": title, "apikey": "621a1d46"})
+        response = requests.get(OMDB_URL, params={"t": title, "apikey": OMDB_API_KEY})
         response.raise_for_status()
         data = response.json()
 
-        # Check if movie exists
+        # Check if movie exists in OMDb
         if data.get("Response") == "False":
-            print(f"Movie '{title}' not found.")
+            print(f"Movie '{title}' not found in OMDb.")
             return
 
-        # Extract fields
         movie_title = data.get("Title")
         year = data.get("Year")
         rating = data.get("imdbRating")
         poster = data.get("Poster")
 
-        # Insert into DB
-        with engine.connect() as connection:
+        # Use a transaction to ensure atomic insert
+        with engine.begin() as connection:  # begin() auto-commits or rolls back
+            # Check if movie already exists in DB
+            existing = connection.execute(
+                text("SELECT 1 FROM movies WHERE title = :title"),
+                {"title": movie_title}
+            ).fetchone()
+
+            if existing:
+                print(f"Movie '{movie_title}' already exists in the database.")
+                return
+
+            # Insert movie into DB
             connection.execute(
-                text("INSERT INTO movies (title, year, rating, poster) VALUES (:title, :year, :rating, :poster)"),
+                text(
+                    "INSERT INTO movies (title, year, rating, poster) "
+                    "VALUES (:title, :year, :rating, :poster)"
+                ),
                 {"title": movie_title, "year": year, "rating": rating, "poster": poster}
             )
-            connection.commit()
 
-        print(f"Movie '{movie_title}' added successfully.")
+        print(f"Movie '{movie_title}' added successfully!")
         print(f"Year: {year}, Rating: {rating}")
-        print(f"Poster: {poster}")
+        print(f"Poster URL: {poster}")
 
     except requests.exceptions.RequestException as e:
-        print(f"Network error: {e}")
+        print(f"Network error while fetching movie '{title}': {e}")
     except Exception as e:
-        print(f"Error adding movie: {e}")
+        print(f"Error adding movie '{title}': {e}")
 
 
 def delete_movie(title):
