@@ -136,7 +136,7 @@ def generate_website():
     movies = list_movies()  # get all movies
 
     # Load your template
-    with open("../index_template.html", "r", encoding="utf-8") as f:
+    with open("_static/index_template.html", "r", encoding="utf-8") as f:
         template = f.read()
 
     # Generate movie grid HTML
