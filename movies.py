@@ -45,7 +45,9 @@ def add_movie_menu():
         return
 
     # Call the OMDb-powered storage function
-    from movie_storage_sql import add_movie  # make sure this points to your updated storage file
+    from storage.movie_storage_sql import add_movie
+    from storage import movie_storage
+
     add_movie(title)
 
 
@@ -131,7 +133,8 @@ def sorted_movies():
 
 
 def generate_website():
-    from movie_storage_sql import list_movies  # import your database function
+    from storage.movie_storage_sql import list_movies
+    # import your database function
 
     movies = list_movies()  # get all movies
 
