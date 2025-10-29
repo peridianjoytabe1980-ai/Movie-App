@@ -1,7 +1,6 @@
 from sqlalchemy import create_engine, text
 import requests
 
-
 engine = create_engine("sqlite:///movies.db")
 
 with engine.connect() as connection:
@@ -16,10 +15,6 @@ with engine.connect() as connection:
     """))
     connection.commit()
 
-
-# ---------------------------
-# FUNCTIONS
-# ---------------------------
 
 def list_movies():
     """Retrieve all movies from the database."""
@@ -39,12 +34,10 @@ def add_movie(title):
     OMDB_URL = "https://www.omdbapi.com/"
 
     try:
-        # Fetch movie data from OMDb
         response = requests.get(OMDB_URL, params={"t": title, "apikey": OMDB_API_KEY})
         response.raise_for_status()
         data = response.json()
 
-        # Check if movie exists in OMDb
         if data.get("Response") == "False":
             print(f"Movie '{title}' not found in OMDb.")
             return
@@ -54,11 +47,10 @@ def add_movie(title):
         rating = data.get("imdbRating")
         poster = data.get("Poster")
 
-        # Use a transaction to ensure atomic insert
-        with engine.begin() as connection:  # begin() auto-commits or rolls back
-            # Check if movie already exists in DB
+        with engine.begin() as connection:
+            # ✅ Case-insensitive check for existing title
             existing = connection.execute(
-                text("SELECT 1 FROM movies WHERE title = :title"),
+                text("SELECT 1 FROM movies WHERE lower(title) = lower(:title)"),
                 {"title": movie_title}
             ).fetchone()
 
@@ -66,7 +58,6 @@ def add_movie(title):
                 print(f"Movie '{movie_title}' already exists in the database.")
                 return
 
-            # Insert movie into DB
             connection.execute(
                 text(
                     "INSERT INTO movies (title, year, rating, poster) "
@@ -86,33 +77,28 @@ def add_movie(title):
 
 
 def delete_movie(title):
-    """Delete a movie from the database."""
-    with engine.connect() as connection:
-        try:
-            result = connection.execute(
-                text("DELETE FROM movies WHERE title = :title"), {"title": title}
-            )
-            connection.commit()
-            if result.rowcount > 0:
-                print(f"Movie '{title}' deleted successfully.")
-            else:
-                print(f"Movie '{title}' not found.")
-        except Exception as e:
-            print(f"Error deleting movie: {e}")
+    """Delete a movie from the database (case-insensitive)."""
+    with engine.begin() as connection:
+        result = connection.execute(
+            text("DELETE FROM movies WHERE lower(title) = lower(:title)"),
+            {"title": title}
+        )
+
+        if result.rowcount > 0:
+            print(f"Movie '{title}' deleted successfully.")
+        else:
+            print(f"Movie '{title}' not found.")
 
 
 def update_movie(title, rating):
-    """Update a movie's rating in the database."""
-    with engine.connect() as connection:
-        try:
-            result = connection.execute(
-                text("UPDATE movies SET rating = :rating WHERE title = :title"),
-                {"title": title, "rating": rating}
-            )
-            connection.commit()
-            if result.rowcount > 0:
-                print(f"Movie '{title}' rating updated to {rating}.")
-            else:
-                print(f"Movie '{title}' not found.")
-        except Exception as e:
-            print(f"Error updating movie: {e}")
+    """Update a movie's rating in the database (case-insensitive)."""
+    with engine.begin() as connection:
+        result = connection.execute(
+            text("UPDATE movies SET rating = :rating WHERE lower(title) = lower(:title)"),
+            {"title": title, "rating": rating}
+        )
+
+        if result.rowcount > 0:
+            print(f"Movie '{title}' rating updated to {rating}.")
+        else:
+            print(f"Movie '{title}' not found.")
